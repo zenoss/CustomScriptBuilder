@@ -8,6 +8,7 @@ print_usage() {
   printf "Usage: ./makepack.sh -a <AUTHOR> -n <Company/Packname> -v <VERSION>\n"
 }
 
+noargs="true"
 while getopts 'a:n:v:h' flag; do
   case "${flag}" in
     a) author="${OPTARG}" ;;
@@ -18,8 +19,18 @@ while getopts 'a:n:v:h' flag; do
     *) print_usage
        exit 1 ;;
   esac
+  noargs="false"
 
 done
+
+if [ "$noargs" == "true" ]; then
+   print_usage
+   exit 1
+elif [ -z "$author" ] || [ -z "$name" ] || [ -z "$version" ] ; then
+   echo "Missing needed argument..." 
+   exit 1
+fi
+
 
 newroot='ZenPacks.'$name'.CustomScripts'
 if test -d $newroot ; then rm -rf $newroot ; fi
@@ -36,7 +47,14 @@ sed -i 's/AUTHOR\ =.*/AUTHOR\ =\ '"'$author'"'/' setup.py
 sed -i "s/example/$name/" setup.py
 sed -i 's/VERSION\ =.*/VERSION\ =\ "'$version'"/' setup.py
 
-python setup.py build bdist_egg >/dev/null 2>&1
+buildout=$(/usr/bin/env python setup.py build bdist_egg  2>&1)
+if [ $? -eq 0 ] ; then
+   cp dist/*.egg ../
+   cd .. ; ls -1 *.egg
+   rm -fR $newroot dist
+else
+   echo "There was an issue building the ZP."
+   echo "$buildout"
+   exit 1
+fi
 
-cp dist/*.egg ../
-cd .. ; ls -1 *.egg
